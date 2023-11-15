@@ -1,0 +1,130 @@
+import tkinter as tk
+import random
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import mpldatacursor
+
+# Global variable to store the user input entry
+user_input_entry = None
+time = []  # Store time data
+heart_rate = []  # Store heart rate data
+
+# Function to generate heart rate data
+def generate_heart_rate_data(duration, sampling_rate):
+    global user_input_entry  # Access the global user_input_entry variable
+    time = [i / sampling_rate for i in range(duration * sampling_rate)]
+    heart_rate = []
+    for _ in time:
+        user_input = user_input_entry.get()
+        if user_input.isdigit():
+            selected_heart_rate = int(user_input)
+            if 10 <= selected_heart_rate <= 39:
+                heart_rate.append(random.randint(10, 60))
+            elif 40 <= selected_heart_rate <= 100:
+                heart_rate.append(random.randint(40, 100))
+            elif 101 <= selected_heart_rate <= 120:
+                heart_rate.append(random.randint(60, 120))
+        else:
+            heart_rate.append(random.randint(10, 120))
+    return time, heart_rate
+
+# Function to plot heart rate
+def plot_heart_rate():
+    global time, heart_rate
+    user_input = user_input_entry.get()
+    
+    if user_input.isdigit():
+        selected_heart_rate = int(user_input)
+        if selected_heart_rate in heart_rate:
+            selected_time = time[heart_rate.index(selected_heart_rate)]
+            window_size = 30
+        else:
+            # Handle the case when the selected heart rate is not in the list
+            return
+    elif user_input:  # Check if user_input is not empty
+        selected_time = float(user_input)
+        window_size = 30
+    else:
+        # Handle the case when user_input is empty (do nothing or display a message)
+        return
+    
+    selection_index = time.index(selected_time)
+    start_index = max(0, selection_index - window_size)
+    end_index = min(len(time), selection_index + window_size)
+    selected_time = time[start_index:end_index]
+    selected_heart_rate = heart_rate[start_index:end_index]
+    
+    ax.clear()
+    if any(10 <= rate <= 39 or 100 <= rate <= 120 for rate in selected_heart_rate):
+        ax.plot(selected_time, selected_heart_rate, label="Heart Rate (bpm)", linestyle='-', linewidth=2, color='red')
+        status = "HALTER MODE START"
+    else:
+        ax.plot(selected_time, selected_heart_rate, label="Heart Rate (bpm)", linestyle='-', linewidth=2, color='blue')
+        status = "NORMAL STATE"
+
+    ax.set_title(f"Heart Rate Around Selection - {status}")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Heart Rate (bpm)")
+    ax.grid(True)
+    ax.legend()
+    
+    mpldatacursor.datacursor(display='multiple', formatter="x: {x:.2f}\ny: {y:.2f}")
+    
+    canvas.draw()
+
+# Function to reload heart rate data and refresh the GUI
+def reload_heart_rate():
+    global time, heart_rate
+    time, heart_rate = generate_heart_rate_data(duration, sampling_rate)
+    ax.clear()
+    ax.plot(time, heart_rate, label="Heart Rate (bpm)", linestyle='-', linewidth=2, color='blue')
+    ax.set_title("Heart Rate")
+    ax.set_xlabel("Time (s)")
+    ax.set_ylabel("Heart Rate (bpm)")
+    ax.grid(True)
+    ax.legend()
+    canvas.draw()
+
+# Create the main window
+root = tk.Tk()
+root.title("Heart Rate Viewer")
+
+# Create a Frame to hold the input widgets
+input_frame = tk.Frame(root)
+input_frame.pack(padx=20, pady=10)
+
+# Entry widget to input heart rate or specific time
+user_input_label = tk.Label(input_frame, text="Enter Heart Rate (bpm) or Time (s):")
+user_input_label.grid(row=0, column=0, padx=5, pady=5)
+user_input_entry = tk.Entry(input_frame)
+user_input_entry.grid(row=0, column=1, padx=5, pady=5)
+
+# Button to plot heart rate
+plot_button = tk.Button(input_frame, text="Plot Heart Rate", command=plot_heart_rate)
+plot_button.grid(row=0, column=2, padx=5, pady=5)
+
+# Button to load heart rate data
+load_button = tk.Button(input_frame, text="Load Heart Rate", command=reload_heart_rate)
+load_button.grid(row=0, column=3, padx=5, pady=5)
+
+# Rest of your code remains the same...
+
+if __name__ == "__main__":
+    # Generate heart rate data
+    duration = 60
+    sampling_rate = 100
+    time, heart_rate = generate_heart_rate_data(duration, sampling_rate)
+
+    # Create a Matplotlib Figure
+    fig = Figure(figsize=(10, 4))
+    ax = fig.add_subplot(111)
+
+    # Create a FigureCanvasTkAgg to embed the Matplotlib figure in the Tkinter window
+    canvas = FigureCanvasTkAgg(fig, master=root)
+    canvas_widget = canvas.get_tk_widget()
+    canvas_widget.pack()
+
+    # Schedule the first update and subsequent updates
+    root.after(0, plot_heart_rate)
+
+    root.mainloop()
